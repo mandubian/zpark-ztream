@@ -149,16 +149,16 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
     println("********************** P1 **************************")
     (p1 through stdOutLines).run.run
 
-    /*println("********************** P2 **************************")
-    (p2 through stdOutLines).run.run*/
+    println("********************** P2 **************************")
+    (p2 through stdOutLines).run.run
 
-    /*println("********************** P3 **************************")
-    (p3 through stdOutLines).run.run*/
+    println("********************** P3 **************************")
+    (p3 through stdOutLines).run.run
 
-    /*println("********************** P4 **************************")
-    (p4 through stdOutLines).run.run*/
+    println("********************** P4 **************************")
+    (p4 through stdOutLines).run.run
 
-    /*println("********************** P5 **************************")
+    println("********************** P5 **************************")
     val p5 = 
       io.linesR("testdata/fahrenheit.txt")
         .filter(s => !s.trim.isEmpty && !s.startsWith("//"))
@@ -169,10 +169,10 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
         .mapRDD { case (k, v) => (k, v.size) }
         .continuize()
 
-    (p5 through stdOutLines).run.run*/
+    (p5 through stdOutLines).run.run
 
-    /*println("********************** P6 **************************")
-    (p6 through stdOutLines).run.run*/
+    println("********************** P6 **************************")
+    (p6 through stdOutLines).run.run
   }
 
   after {

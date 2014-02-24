@@ -152,9 +152,9 @@ class TaskRDDProcess2TaskProcess[I : ClassTag](val p: Process[Task, RDD[I]])(imp
 
   def continuize(): Process[Task, I] =
     p.flatMap { rdd: RDD[I] =>
-      val f = RemoteJobClosures.submitJobCollect(rdd)
+      //val f = RemoteJobClosures.submitJobCollect(rdd)
       Process.await(
-          Zpark.scalaFuture2scalazTask(rdd.collectAsync())
+        Zpark.scalaFuture2scalazTask(rdd.collectAsync())
       )( seq => Process.emitSeq(seq) )
     }
 
