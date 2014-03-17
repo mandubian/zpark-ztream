@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2014 Pascal Voitot (@mandubian)
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +14,9 @@
  * limitations under the License.
  */
 
-package org.apache.spark.zpark
+/** I use spark package to hack all those private Spark classes */
+package org.apache.spark
+package zpark
 
 import org.apache.spark._
 import org.apache.spark.rdd._
@@ -33,7 +34,13 @@ import scala.util.{Try, Success, Failure}
 
 import ExecutionContext.Implicits.global
 
-object Zpark {
+/** EXPERIMENTAL stream discretization based on scalaz-stream & Spark RDD 
+  * This is a study on using scalaz-stream instead of DStream but nothing more
+  * than an idea and it does't provide any fault tolerance and persistence of
+  * of stream graph as DStream...
+  * So now it's just an exercise of style ;)
+  */
+object KraZpark {
 
   implicit def taskProcess2RDDProcess[I : ClassTag](p: Process[Task, I])(implicit scc: StreamingContext) =
     new TaskProcess2RDDProcess(p)
@@ -67,7 +74,7 @@ object Zpark {
    * Note that the actual granularity of these times depends on the OS, for instance
    * the OS may only update the current time every ten milliseconds or so.
    */
-   def timeStream: Process[Task, Long] = Process.suspend {
+  def timeStream: Process[Task, Long] = Process.suspend {
     Process.repeatEval { Task.delay { System.nanoTime }}
   }
 
@@ -136,12 +143,12 @@ class TaskProcess2RDDProcess[I : ClassTag](val p: Process[Task, I])(implicit ssc
     }
 
   def discretize(batchDuration: Duration): Process[Task, RDD[I]] =
-    (Process.duration wye p)(Zpark.tickeredQueue(batchDuration)).filter(!_.isEmpty).evalMap { vec =>
+    (Process.duration wye p)(KraZpark.tickeredQueue(batchDuration)).filter(!_.isEmpty).evalMap { vec =>
       Task.delay{ ssc.sparkContext.parallelize(vec.toSeq) }
     }
 
   def discretizeKeepTime(batchDuration: Duration): Process[Task, (Long, RDD[I])] =
-    (Zpark.timeStream wye p)(Zpark.tickeredQueueWithTime(batchDuration)).filter(!_._2.isEmpty).evalMap { case (time, vec) =>
+    (KraZpark.timeStream wye p)(KraZpark.tickeredQueueWithTime(batchDuration)).filter(!_._2.isEmpty).evalMap { case (time, vec) =>
       Task.delay{ (time, ssc.sparkContext.parallelize(vec.toSeq)) }
     }
 
@@ -154,7 +161,7 @@ class TaskRDDProcess2TaskProcess[I : ClassTag](val p: Process[Task, RDD[I]])(imp
     p.flatMap { rdd: RDD[I] =>
       //val f = RemoteJobClosures.submitJobCollect(rdd)
       Process.await(
-        Zpark.scalaFuture2scalazTask(rdd.collectAsync())
+        KraZpark.scalaFuture2scalazTask(rdd.collectAsync())
       )( seq => Process.emitSeq(seq) )
     }
 
@@ -184,7 +191,7 @@ class ExtendPairProcessRDD[F[_], K : ClassTag, V : ClassTag](val self: Process[F
   import org.apache.spark.{Partitioner, HashPartitioner}
   import org.apache.spark.util.ClosureCleaner
 
-  import Zpark._
+  import KraZpark._
 
   def reduceByKey(reduceFunc: (V, V) => V): Process[F, RDD[(K, V)]] = {
     reduceByKey(reduceFunc, defaultPartitioner)
@@ -231,7 +238,7 @@ class ExtendPairProcessRDD[F[_], K : ClassTag, V : ClassTag](val self: Process[F
 
 
 class ExtendProcessRDD[F[_], T : ClassTag](val process: Process[F, RDD[T]])(implicit ssc: StreamingContext) {
-  import Zpark._
+  import KraZpark._
   import SparkContext._
 
   def mapRDD[U: ClassTag](f: T => U): Process[F, RDD[U]] = {
@@ -286,7 +293,7 @@ class ExtendProcessRDD[F[_], T : ClassTag](val process: Process[F, RDD[T]])(impl
 class ExtendProcessTimeRDD[F[_], T : ClassTag](val process: Process[F, (Long, RDD[T])])(implicit ssc: StreamingContext) {
   import SparkContext._
 
-  import Zpark._
+  import KraZpark._
   /**
    * Return a new TimeRDDProcess in which each RDD contains all the elements in seen in a
    * sliding window of time over this DStream.

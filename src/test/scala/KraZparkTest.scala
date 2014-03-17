@@ -10,6 +10,8 @@ import org.apache.spark.streaming.{StreamingContext, Seconds}
 import com.codahale.metrics._
 import com.codahale.metrics.jvm._
 import java.util.concurrent.TimeUnit
+import java.net.InetSocketAddress
+import scala.concurrent.SyncVar
 
 import org.apache.log4j.{Level, Logger}
 
@@ -22,23 +24,23 @@ import org.apache.log4j.{Level, Logger}
   }
 }*/
 
-object Metrics {
+object Metrics2 {
   val metricRegistry = new MetricRegistry()
 
 }
 
-trait Instrumented extends nl.grons.metrics.scala.InstrumentedBuilder {
+trait Instrumented2 extends nl.grons.metrics.scala.InstrumentedBuilder {
   val metricRegistry = Metrics.metricRegistry
   metricRegistry.register(MetricRegistry.name("jvm", "memory"), new MemoryUsageGaugeSet());
 }
 
-class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAndAfter {
+class KraZparkSpec extends FlatSpec with Matchers with Instrumented  with BeforeAndAfter {
   var sc: SparkContext = null
   var ssc: StreamingContext = null
   var reporter: ConsoleReporter = null
 
   //val clusterUrl = "local-cluster[2,1,512]"
-  val clusterUrl = "local[4]"
+  val clusterUrl = "local[2]"
 
   before {
     // Make sure to set these properties *before* creating a SparkContext!
@@ -61,7 +63,7 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
     // reporter.start(1, TimeUnit.MINUTES);
   }
 
-  private[this] val mzuring = metrics.timer("mm")
+  //private[this] val mzuring = metrics.timer("mm")
 
   /*"Spark" should "spark" in {
     val data = 1 to 1000000
@@ -78,28 +80,30 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
 
   import scalaz.concurrent.Task
   import scalaz.stream._
+  import scala.concurrent.duration._
 
   def stdOutLines[I]: Sink[Task, I] =
     Process.constant{ (s: I) => Task.delay { println(s" ----> [${System.nanoTime}] *** $s") }}
 
-  "Spark" should "spark" in {
+
+  /** Generates continuous stream of positive naturals */
+  def naturals: Process[Task, Int] = {
+    def go(i: Int): Process[Task, Int] = Process.await(Task.delay(i)){ i => Process.emit(i) ++ go(i+1) }
+    go(0)
+  }
+
+  def naturalsEvery(duration: Duration): Process[Task, Int] =
+    (naturals zipWith Process.awakeEvery(duration)){ (i, b) => i }
+
+
+  "KraZpark" should "crazy sparkle" in {
     import scalaz.stream._
     import scalaz.concurrent.Task
-    import scala.concurrent.duration._
 
     import org.apache.spark.zpark._
-    import Zpark._
+    import KraZpark._
 
     implicit val sssc = ssc
-
-    /** Generates continuous stream of positive naturals */
-    def naturals: Process[Task, Int] = {
-      def go(i: Int): Process[Task, Int] = Process.await(Task.delay(i)){ i => Process.emit(i) ++ go(i+1) }
-      go(0)
-    }
-
-    def naturalsEvery(duration: Duration): Process[Task, Int] = 
-      (naturals zipWith Process.awakeEvery(duration)){ (i, b) => i }
 
     /** parallelize by batch of 4 and count by values */
     val p10 = Process(1L, 1L, 2L, 2L, 3L, 3L, 4L, 4L).parallelize(4).countRDDByValue().continuize()
@@ -108,7 +112,7 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
     /** generate naturals every 10 milliseconds and then parallelize by batch of 100 and count
       * and recontinuize the stream (keep only the first 100000s)
       */
-    val p2 = 
+    val p2 =
       naturalsEvery(10 milliseconds)
       .take(1000)
       .parallelize(100)
@@ -120,7 +124,7 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
       * apply a distributed count
       * and recontinuize the stream
       */
-    val p3 = 
+    val p3 =
       naturalsEvery(10 milliseconds)
       .take(5000)
       .discretize(500 milliseconds)
@@ -159,7 +163,7 @@ class SerialSpec extends FlatSpec with Matchers with Instrumented  with BeforeAn
     (p4 through stdOutLines).run.run
 
     println("********************** P5 **************************")
-    val p5 = 
+    val p5 =
       io.linesR("testdata/fahrenheit.txt")
         .filter(s => !s.trim.isEmpty && !s.startsWith("//"))
         .map(line => line.toDouble)
