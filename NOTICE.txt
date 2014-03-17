@@ -1,6 +1,6 @@
 play-scalaz-stream
 
-Copyright 2013 Pascal Voitot.
+Copyright 2014 Pascal Voitot.
 
 Please read each subproject's NOTICE.txt file for more specific information.
 
