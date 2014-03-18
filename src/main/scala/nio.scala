@@ -268,7 +268,7 @@ object CustomStrategy {
   def buildAsynchronousChannelGroup = {
     val idx = new AtomicInteger(0)
     AsynchronousChannelProvider.provider().openAsynchronousChannelGroup(
-      Runtime.getRuntime.availableProcessors() / 2 /** 2 max 2*/,
+      /*Runtime.getRuntime.availableProcessors() / 2*/ 2 max 2,
       new ThreadFactory {
         def newThread(r: Runnable): Thread = {
           val t = new Thread(r, s"scalaz-stream-nio-${idx.incrementAndGet()}")
